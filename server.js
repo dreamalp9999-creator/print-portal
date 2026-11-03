@@ -2,13 +2,12 @@ const express = require('express');
 const multer  = require('multer');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
-// फाइलों को डिस्क पर सेव नहीं करेंगे, सीधे मेमोरी (RAM) में रखेंगे ताकि कभी कचरा न जमे!
+// मेमोरी स्टोरेज (फाइलें सर्वर पर सेव नहीं होंगी, सीधे रैम में आएंगी और 5 मिनट में डिलीट)
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// अस्थायी रूप से फाइलों को याद रखने के लिए एरे (Array) - जो सर्वर रीस्टार्ट होते ही खाली हो जाता है
 let uploadedFiles = [];
 
 // 1. ग्राहक के लिए अपलोड पेज (Customer Upload Page)
@@ -54,7 +53,7 @@ app.post('/upload', upload.single('document'), (req, res) => {
 
     uploadedFiles.push(fileObj);
 
-    // सुरक्षा के लिए: 5 मिनट (300000 मिलीसेकंड) बाद फाइल अपने आप मेमोरी से डिलीट हो जाएगी!
+    // 5 मिनट बाद ऑटोमैटिक डिलीट
     setTimeout(() => {
         uploadedFiles = uploadedFiles.filter(f => f.id !== fileId);
     }, 5 * 60 * 1000);
@@ -114,29 +113,3 @@ app.get('/admin', (req, res) => {
                     <button onclick="location.reload()" class="px-3 py-1 bg-blue-100 text-blue-600 text-sm font-semibold rounded-lg hover:bg-blue-200">रिफ्रेश 🔄</button>
                 </div>
                 <div class="space-y-2">
-                    ${fileListHtml}
-                </div>
-            </div>
-        </body>
-        </html>
-    `);
-});
-
-// 4. फाइल देखने और प्रिंट करने का रास्ता
-app.get('/view/:id', (req, res) => {
-    const file = uploadedFiles.find(f => f.id == req.params.id);
-    if (!file) return res.status(404).send("फाइल नहीं मिली या डिलीट हो चुकी है!");
-    
-    res.setHeader('Content-Type', file.mimetype);
-    res.send(file.buffer);
-});
-
-// 5. मैन्युअल रूप से तुरंत डिलीट करने का रास्ता
-app.get('/delete/:id', (req, res) => {
-    uploadedFiles = uploadedFiles.filter(f => f.id != req.params.id);
-    res.redirect('/admin');
-});
-
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
